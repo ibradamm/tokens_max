@@ -26,9 +26,11 @@ from starlette.routing import Mount, Route
 from . import agent_skills, graphify_server, omniroute_proxy, ponytail
 
 SECRET = os.environ.get("MCP_SECRET", "")
-if len(SECRET) < 24 and os.environ.get("ALLOW_WEAK_SECRET") != "1":
-    sys.exit("MCP_SECRET must be set to a random string of at least 24 characters "
-             "(python -c 'import secrets; print(secrets.token_urlsafe(32))')")
+CONFIGURED = len(SECRET) >= 24 or (bool(SECRET) and os.environ.get("ALLOW_WEAK_SECRET") == "1")
+NOT_CONFIGURED_MSG = ("MCP_SECRET is not set: no MCP endpoint is exposed. Set it to a random string of at "
+                      "least 24 characters (python -c 'import secrets; print(secrets.token_urlsafe(32))').")
+if not CONFIGURED:
+    print(NOT_CONFIGURED_MSG, file=sys.stderr)
 
 NO_REBINDING_CHECK = TransportSecuritySettings(enable_dns_rebinding_protection=False)
 FASTMCP_SETTINGS = dict(stateless_http=True, transport_security=NO_REBINDING_CHECK)
@@ -70,8 +72,9 @@ class SecretGate:
 
 
 async def index(_: Request) -> JSONResponse:
-    return JSONResponse({"service": "tokens_max MCP connectors",
-                         "endpoints": ["ponytail", "agent-skills", "graphify", "omniroute"]})
+    return JSONResponse({"service": "tokens_max MCP connectors", "configured": CONFIGURED,
+                         "endpoints": ["ponytail", "agent-skills", "graphify", "omniroute"]}
+                        | ({} if CONFIGURED else {"error": NOT_CONFIGURED_MSG}))
 
 
 async def healthz(_: Request) -> PlainTextResponse:
@@ -86,19 +89,21 @@ async def lifespan(_app):
         await omniroute_proxy._client.aclose()
 
 
-app = SecretGate(Starlette(
-    routes=[
-        Route("/", index),
-        Route("/healthz", healthz),
-        Mount(f"/{SECRET}", routes=[
-            Mount("/ponytail", app=pony_app),
-            Mount("/agent-skills", app=skills_app),
-            Route("/graphify/mcp", _ManagerApp(graph_manager), methods=["GET", "POST", "DELETE"]),
-            Route("/omniroute/mcp", omniroute_proxy.handle, methods=["GET", "POST", "DELETE"]),
-        ]),
-    ],
-    lifespan=lifespan,
-))
+PUBLIC_ROUTES = [Route("/", index), Route("/healthz", healthz)]
+if CONFIGURED:
+    app = SecretGate(Starlette(
+        routes=PUBLIC_ROUTES + [
+            Mount(f"/{SECRET}", routes=[
+                Mount("/ponytail", app=pony_app),
+                Mount("/agent-skills", app=skills_app),
+                Route("/graphify/mcp", _ManagerApp(graph_manager), methods=["GET", "POST", "DELETE"]),
+                Route("/omniroute/mcp", omniroute_proxy.handle, methods=["GET", "POST", "DELETE"]),
+            ]),
+        ],
+        lifespan=lifespan,
+    ))
+else:
+    app = Starlette(routes=PUBLIC_ROUTES)
 
 
 def main() -> None:

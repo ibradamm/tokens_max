@@ -72,7 +72,9 @@ Deux services dans un projet :
    public (pour le tableau de bord), variables : `JWT_SECRET`, `API_KEY_SECRET`,
    `INITIAL_PASSWORD`, `REQUIRE_API_KEY=true`, `RAILWAY_RUN_UID=0`.
 2. **gateway** — ce dépôt (Dockerfile), volume sur `/data`, domaine public, variables :
-   - `MCP_SECRET` (obligatoire, ≥ 24 caractères : `python -c "import secrets; print(secrets.token_urlsafe(32))"`)
+   - `MCP_SECRET` (obligatoire, ≥ 24 caractères : `python -c "import secrets; print(secrets.token_urlsafe(32))"`).
+     Sans lui, le service démarre en mode « non configuré » : `/` affiche l'erreur et aucun
+     endpoint MCP n'est exposé.
    - `OMNIROUTE_URL=https://<domaine omniroute>`
    - `OMNIROUTE_PASSWORD=${{omniroute.INITIAL_PASSWORD}}` (active le MCP d'OmniRoute et
      crée une clé `manage` au premier appel ; ou `OMNIROUTE_API_KEY` si tu la crées toi-même)
