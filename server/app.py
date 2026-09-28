@@ -14,6 +14,7 @@ from __future__ import annotations
 import contextlib
 import hmac
 import os
+import re
 import sys
 
 from mcp.server.streamable_http_manager import StreamableHTTPSessionManager
@@ -25,10 +26,16 @@ from starlette.routing import Mount, Route
 
 from . import agent_skills, graphify_server, omniroute_proxy, ponytail
 
+def valid_secret(secret: str, allow_weak: bool = False) -> bool:
+    """The secret is a URL path segment: URL-safe characters only, and long enough to be unguessable."""
+    return bool(re.fullmatch(r"[A-Za-z0-9_-]+", secret)) and (len(secret) >= 24 or allow_weak)
+
+
 SECRET = os.environ.get("MCP_SECRET", "")
-CONFIGURED = len(SECRET) >= 24 or (bool(SECRET) and os.environ.get("ALLOW_WEAK_SECRET") == "1")
-NOT_CONFIGURED_MSG = ("MCP_SECRET is not set: no MCP endpoint is exposed. Set it to a random string of at "
-                      "least 24 characters (python -c 'import secrets; print(secrets.token_urlsafe(32))').")
+CONFIGURED = valid_secret(SECRET, os.environ.get("ALLOW_WEAK_SECRET") == "1")
+NOT_CONFIGURED_MSG = ("MCP_SECRET is missing or invalid: no MCP endpoint is exposed. Set it to a random string "
+                      "of at least 24 letters, digits, '-' or '_' "
+                      "(python -c 'import secrets; print(secrets.token_urlsafe(32))').")
 if not CONFIGURED:
     print(NOT_CONFIGURED_MSG, file=sys.stderr)
 

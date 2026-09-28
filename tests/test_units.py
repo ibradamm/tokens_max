@@ -61,3 +61,12 @@ def test_parse_repo():
                 "https://github.com/o/..", "https://10.0.0.1/o/r", "https://github.com:8443/o/r"):
         with pytest.raises(ValueError):
             parse_repo(bad)
+
+
+def test_secret_must_be_url_safe_and_long():
+    from server.app import valid_secret
+
+    assert valid_secret("A" * 24) and valid_secret("abc-DEF_123" * 3)
+    assert not valid_secret("") and not valid_secret("a" * 23)
+    assert not valid_secret("a/b" * 10) and not valid_secret("a b" * 10) and not valid_secret("é" * 30)
+    assert valid_secret("short", allow_weak=True) and not valid_secret("", allow_weak=True)

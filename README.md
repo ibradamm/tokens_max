@@ -33,7 +33,7 @@ URL → Ajouter. Pas d'OAuth à configurer. Activer ensuite le connecteur dans l
 conversation (menu « + » / outils).
 
 **Sécurité** : claude.ai ne peut pas envoyer d'en-tête d'authentification fixe, donc
-l'accès repose sur le segment secret `MCP_SECRET` (URL-capacité, 256 bits). Toute personne
+l'accès repose sur le segment secret `MCP_SECRET` (URL-capacité ; 32 octets aléatoires = 256 bits). Toute personne
 qui a l'URL peut utiliser le connecteur : ne la publie pas. Pour la révoquer, change
 `MCP_SECRET` sur Railway puis recrée les connecteurs.
 
@@ -70,9 +70,11 @@ Deux services dans un projet :
 
 1. **omniroute** — image `diegosouzapw/omniroute:latest`, volume sur `/app/data`, domaine
    public (pour le tableau de bord), variables : `JWT_SECRET`, `API_KEY_SECRET`,
-   `INITIAL_PASSWORD`, `REQUIRE_API_KEY=true`, `RAILWAY_RUN_UID=0`.
+   `INITIAL_PASSWORD`, `REQUIRE_API_KEY=true`, `RAILWAY_RUN_UID=0`, `PORT=20128`, `DATA_DIR=/app/data`.
 2. **gateway** — ce dépôt (Dockerfile), volume sur `/data`, domaine public, variables :
-   - `MCP_SECRET` (obligatoire, ≥ 24 caractères : `python -c "import secrets; print(secrets.token_urlsafe(32))"`).
+   - `MCP_SECRET` (obligatoire) : au moins 24 caractères parmi lettres, chiffres, `-` et `_`
+     (il fait partie de l'URL). `openssl rand -hex 24` ou
+     `python -c "import secrets; print(secrets.token_urlsafe(32))"`.
      Sans lui, le service démarre en mode « non configuré » : `/` affiche l'erreur et aucun
      endpoint MCP n'est exposé.
    - `OMNIROUTE_URL=https://<domaine omniroute>`
@@ -89,7 +91,7 @@ volume persistant et les mêmes variables.
 
 ```bash
 pip install -r requirements.txt pytest
-python -m pytest -q tests                               # 14 tests, dont parité Ponytail vs JS d'origine
+python -m pytest -q tests                               # 15 tests, dont parité Ponytail vs JS d'origine
 python scripts/smoke_test.py https://<domaine>/<MCP_SECRET>   # appelle les 4 endpoints avec le client MCP officiel
 ```
 
