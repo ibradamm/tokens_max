@@ -1,0 +1,6 @@
+Vendored verbatim from upstream (do not edit by hand; run scripts/sync_vendor.sh):
+ponytail      https://github.com/DietrichGebert/ponytail      e3ba2aa6f1e6f0bc4d69eb09c9f0d0a93af56156  MIT
+agent-skills  https://github.com/addyosmani/agent-skills      2686b620fc1fed2e8f60c704839c766b8594c6b6  MIT
+Not vendored (installed from PyPI / run from the official image):
+graphify      https://github.com/Graphify-Labs/graphify       graphifyy==0.9.71 (PyPI)  Apache-2.0
+omniroute     https://github.com/diegosouzapw/OmniRoute       diegosouzapw/omniroute (Docker Hub)  MIT
